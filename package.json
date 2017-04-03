@@ -1,0 +1,19 @@
+{
+  "name": "node-local-player",
+  "author": "fallen90",
+  "license": "MIT",
+  "version": "0.0.1",
+  "bin": {
+    "player": "index.js"
+  },
+  "main": "index.js",
+  "preferGlobal": true,
+  "dependencies": {
+    "express": "^4.15.2",
+    "minimist": "^1.2.0",
+    "node-natural-sort": "^0.8.6",
+    "request": "^2.81.0",
+    "underscore": "^1.8.3",
+    "video.js": "^5.19.0"
+  }
+}
