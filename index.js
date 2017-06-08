@@ -1,6 +1,15 @@
-#!/usr/bin/env node
-
 let __currentdirr = process.cwd();
+let saved_dirs = [__currentdirr,
+	'/home/fallen90/Videos/',
+	'/home/fallen90/Videos/BabyLooneyTunes/',
+	'/media/fallen90/BRUH/Sofia the first/',
+	'/media/fallen90/Spare HDD/Downloads/Sheriff Callie\'s Wild West Season 1, Episodes 01-17 [Nanto]/',
+	//	'/media/fallen90/Spare HDD/Downloads/Danny Phantom/Season 3/',
+	//	'/media/fallen90/Spare HDD/Downloads/Danny Phantom/Season 2/',
+	//	'/media/fallen90/Spare HDD/Downloads/Danny Phantom/Season 1/',
+	'/media/fallen90/Era/Movies/Jake and the neverland pirates/',
+	// '/media/fallen90/MICHAEL/Chalkzone/', 
+];
 let express = require('express');
 let nsort = require('node-natural-sort');
 let path = require('path');
@@ -16,138 +25,113 @@ let playlist = [];
 let add_this = argv.add || false;
 let add_this_host = argv.remote || false;
 let url = require('url');
-
+let just_played = [];
 
 function init(req) {
-    let deferred = Promise.defer();
-    fs.readdir(__currentdirr, function(err, items) {
-        let hostname = req.protocol + '://' + req.get('host') + '/';
-        deferred.resolve(items
-            .filter(item => {
-                return path.extname(item).toLowerCase() === '.mp4';
-            })
-            .map(item => {
-                return hostname + encodeURIComponent(item);
-            })
-            .sort(nsort()));
+	let deferred = Promise.defer();
+	let items_all = [];
+	_.each(saved_dirs, function (dir) {
+		let items = [];
+		try { items = fs.readdirSync(dir); } catch (e) {
+			return;
+		}
+		let hostname = '/'; //req.protocol + '://' + req.get('host') + '/';
+		Array.prototype.push.apply(items_all, items.filter(item => {
+			return _.contains(['.mp4', '.mp3', '.m4a', '.webm', '.webp', '.weba'], path.extname(item).toLowerCase());
+		}).map(item => {
+			let url = hostname + encodeURIComponent(item);
+			return url;
+		}).sort(nsort()));
+	});
 
-        if (err) {
-            deferred.reject(err);
-        }
-    });
-    return deferred.promise;
+	let transformed = [];
+
+	_.each(items_all, item => {
+		transformed.push({
+			sources: [{
+				src: item,
+				type: 'video/mp4'
+			}],
+			poster : 'http://media.w3.org/2010/05/sintel/poster.png'
+		});
+	});
+	
+	items_all = transformed;
+
+	deferred.resolve(items_all);
+	return deferred.promise;
 }
 
+function shuffle(a) {
+	for (let i = a.length; i; i--) {
+		let j = Math.floor(Math.random() * i);
+		[a[i - 1], a[j]] = [a[j], a[i - 1]];
+	}
+}
+
+app.set('view engine', 'ejs');
+
+
 app.use(express.static(__currentdirr));
-
+_.each(saved_dirs, function (dir) { app.use(express.static(dir)); });
 if (add_this && add_this_host != false) {
-    let urlObject = url.parse(add_this_host);
-    urlObject.get = function(key) {
-        return this[key];
-    }
-    init({
-    	protocol : urlObject.protocol.replace(':', ''),
-    	get : function(key){
-    		if(key == 'host'){
-    			return urlObject.hostname + ':' + PORT;
-    		}
-    	}
-    }).then(function(ls) {
-        request(add_this_host + '/playlist/?json=' + JSON.stringify(ls), (error, response, body) => {
-        	console.log('Player response', response.body);
-        });
-    }, function(err){
-    	console.log('Error', err);
-    });
+	let urlObject = url.parse(add_this_host);
+	urlObject.get = function (key) {
+		return this[key];
+	}
+	init({
+		protocol: urlObject.protocol.replace(':', ''),
+		get: function (key) {
+			if (key == 'host') {
+				return urlObject.hostname + ':' + PORT;
+			}
+		}
+	}).then(function (ls) { request(add_this_host + '/playlist/?json=' + JSON.stringify(ls), (error, response, body) => { console.log('Player response', response.body); }); }, function (err) { console.log('Error', err); });
 } else {
-    app.get('/playlist', (req, res) => {
-        var json = req.query.json;
-        let data = JSON.parse(json);
-        let playlist_before = playlist;
+	app.get('/playlist', (req, res) => {
+		var json = req.query.json;
+		let data = JSON.parse(json);
+		let playlist_before = playlist;
+		_.each(data, item => {
+			let url_item = url.parse(item);
+			console.log(url_item.host, url_item.path);
+			playlist.push(url_item.href);
+		});
+		return res.json({ status: 'OK', added: data.length });
+	});
+	app.use('/scripts', express.static(__dirname + '/node_modules/'));
+	app.use('/scripts', express.static(__dirname + '/node_modules/'));
+	app.get('/', (req, res) => { res.redirect('/init'); });
+	app.get('/list', (req, res) => {
+		return res.json(playlist);
+	});
+	app.get('/init', (req, res) => {
+		init(req).then(function (ls) {
+			playlist = ls;
+			res.redirect('/viewer');
+		}, function (err) {
+			return res.json(err);
+		});
+	});
+	app.get('/viewer', (req, res) => {
 
-        _.each(data, item => {
-            playlist.push(item);
-        });
-        return res.json({
-            status: 'OK',
-            added: data.length
-        });
-    });
-    app.use('/scripts', express.static(__dirname + '/node_modules/video.js/dist/'));
-    app.get('/', (req, res) => {
-        init(req);
-        res.redirect('/viewer');
-    });
-    app.get('/viewer', (req, res) => {
+		if (!playlist.length) {
+			return res.redirect('/init');
+		}
 
-        if (!playlist.length) {
-            init(req);
-        }
+		shuffle(playlist);
 
-        let options = {
-            "controls": CONTROLS,
-            "autoplay": true,
-            "preload": "auto",
-            "aspectRatio": "16:3"
-        };
-        let html = `
-			<head>
-			  <link href="scripts/video-js.css" rel="stylesheet">
 
-			  <style>
-				body {
-					padding:0;
-					margin:0;
-					background:black;
-				}
-				video {
-					width: 100%;
-					height:100%;
-				}
-				#my-video {
-					width:100vw;
-					height:100vh;
-				}
-			  </style>
-			</head>
-
-			<body>
-			  <video id="my-video" class="video-js" data-setup='` + JSON.stringify(options) + `'>
-			    <source src="` + playlist[Math.floor(Math.random() * playlist.length)] + `" type='video/mp4'>
-			  </video>
-
-			  <script src="scripts/video.js"></script>
-			  <script>
-				document.addEventListener('contextmenu', event => event.preventDefault());
-				var video = videojs('my-video').ready(function(){
-				  var player = this;
-
-				  player.on('ended', function() {
-				    window.location.reload();
-				  });
-				  
-				  player.on('timeupdate', function(e){
-				  	var percent = (player.currentTime() / player.duration()) * 100;
-				  	if(percent >= 98){
-						window.location.reload();
-					}
-				  });
-				});
-			  </script>
-			</body>
-		`;
-
-        res.setHeader('Content-Type', 'text/html');
-
-        if (playlist.length) {
-            return res.send(html);
-        } else {
-            return res.send(`
-			<center><h1>No playable items</h1></center>
-    	`);
-        }
-    });
+		res.render('index', { playlist: playlist });
+	});
 }
 
 console.log('[ ' + ((add_this) ? 'fileserver' : 'player') + ' ] ' + ((add_this) ? 'fileserver' : 'player') + ' listening to ', 'http://' + HOST + ':' + PORT);
+
 app.listen(PORT, HOST);
+
+process.on('uncaughtException', function (err) {
+	PORT = parseInt(8080) + 1;
+	console.log('[ ' + ((add_this) ? 'fileserver' : 'player') + ' ] ' + ((add_this) ? 'fileserver' : 'player') + ' listening to ', 'http://' + HOST + ':' + PORT);
+	app.listen(PORT, HOST);
+});
