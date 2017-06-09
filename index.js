@@ -1,4 +1,5 @@
 #!/home/fallen90/.nvm/versions/node/v6.10.2/bin/node
+
 let __currentdirr = process.cwd();
 let saved_dirs = [__currentdirr,
 	'/media/fallen90/Workspace/Foster/',
@@ -13,10 +14,15 @@ let saved_dirs = [__currentdirr,
 	// '/media/fallen90/MICHAEL/Chalkzone/', 
 ];
 let express = require('express');
+let app = express();
+var server = require('http').createServer(app);
+var io = require('socket.io').listen(server);
+
+
+
 let nsort = require('node-natural-sort');
 let path = require('path');
 let argv = require('minimist')(process.argv.slice(2));
-let app = express();
 let PORT = argv.p || argv.port || 80;
 let HOST = argv.h || argv.host || argv.ip || '0.0.0.0';
 let CONTROLS = argv.controls || argv.c || false;
@@ -54,10 +60,10 @@ function init(req) {
 				src: item,
 				type: 'video/mp4'
 			}],
-			poster : '/poster.png'
+			poster: '/poster.png'
 		});
 	});
-	
+
 	items_all = transformed;
 
 	deferred.resolve(items_all);
@@ -127,7 +133,7 @@ if (add_this && add_this_host != false) {
 
 	app.get('/', (req, res) => { res.redirect('/init'); });
 	app.get('/list', (req, res) => {
-		return res.json(playlist);
+		return res.jsonp(playlist);
 	});
 	app.get('/init', (req, res) => {
 		init(req).then(function (ls) {
@@ -145,17 +151,36 @@ if (add_this && add_this_host != false) {
 
 		shuffle(playlist);
 
+		playlist = playlist;
 
 		res.render('index', { playlist: playlist });
 	});
+
+	app.get('/controller', (req, res)=>{
+		res.render('controller');
+	});
 }
+
+io.on('connection', function (socket) {
+	let current_player = 0;
+	socket.on('timeupdate', function (msg) {
+		io.sockets.emit('timeupdate', msg);
+	});
+	socket.on('controller', function (msg) {
+		io.sockets.emit('controller', msg);
+	});
+	socket.on('current_playlist', function (msg) {
+		io.sockets.emit('current_playlist', msg);
+	});
+});
+
 
 console.log('[ ' + ((add_this) ? 'fileserver' : 'player') + ' ] ' + ((add_this) ? 'fileserver' : 'player') + ' listening to ', 'http://' + HOST + ':' + PORT);
 
-app.listen(PORT, HOST);
+server.listen(PORT, HOST);
 
 process.on('uncaughtException', function (err) {
 	PORT = parseInt(8080) + 1;
 	console.log('[ ' + ((add_this) ? 'fileserver' : 'player') + ' ] ' + ((add_this) ? 'fileserver' : 'player') + ' listening to ', 'http://' + HOST + ':' + PORT);
-	app.listen(PORT, HOST);
+	server.listen(PORT, HOST);
 });

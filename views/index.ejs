@@ -35,11 +35,11 @@
 <body>
    <button id="fullscreen">F</button>
    
-   <video id="my-video" class="video-js" data-setup='{ "controls": true, "autoplay": true, "preload": "auto", "aspectRatio": "16:3" }' autoplay></video>
-   <script src="/mini-meteor.min.js"></script>
+   <video id="my-video" class="video-js" data-setup='{ "controls": true, "autoplay": false, "preload": "auto", "aspectRatio": "16:3" }'></video>
    <script src="/scripts/video.js/dist/video.js"></script>
    <script src="/scripts/videojs-playlist/dist/videojs-playlist.js"></script>
    <script src="/scripts/underscore/underscore.js"></script>
+   <script src="/socket.io/socket.io.js"></script>
    <script>
       function toggleFullScreen() {
          var doc = window.document;
@@ -63,9 +63,15 @@
 
       document.addEventListener('contextmenu', event => event.preventDefault());
       var video = videojs('my-video').ready(function() {
+         window.socket = io();
+         window.client_id = Math.floor(Math.random() * (99999 - 11111 + 1)) + 0;
          window.player = this;
          window.playlist = <%- JSON.stringify(playlist) %>;
          window.playlist_played = [];
+
+         window.current_index = player.playlist.currentIndex_;
+         window.current_item = window.playlist[window.current_index];
+
 
          function get_next(){
             let max_index = window.playlist.length -1;
@@ -74,7 +80,7 @@
             while(_.contains(playlist_played, next_index)){
                next_index = Math.floor(Math.random() * (max_index - 0 + 1)) + 0;
                player.playlist.currentItem(next_index);
-               player.playlist.currentIndex_ = next_index;
+               window.current_index = next_index;
             }
 
             playlist_played.push(next_index);
@@ -82,20 +88,66 @@
 
          player.playlist(window.playlist);
 
+         player.on('playing', function(){
+            let current_source = player.currentSource();
+            _.each(window.playlist, (item, index) => {
+               if(item.sources[0].src == current_source.src){
+                  window.current_index = index;
+                  window.current_item = item;
+               }
+            });
+
+
+         });
+
          player.on('timeupdate', function(e) {
             var percent = (player.currentTime() / player.duration()) * 100;
             if (percent >= 98) {
                get_next();
             }
+
+            socket.emit('timeupdate', {
+               from : window.client_id,
+               progress : {
+                  percent : percent,
+                  current_time : player.currentTime(),
+                  duration : player.duration()
+               },
+               playing : window.current_item
+            });
+
+
          });
          
          player.on('error', function(e){
             get_next();
          });
 
-         player.playlist.autoadvance(0);
+         socket.on('controller', function(data){
+           if(data.type == "seek"){
+            player.currentTime(data.value);
+           }
 
-         this.play();
+           switch(data.type){
+               case 'seek' :
+                  player.currentTime(data.value);
+                  break;
+               case 'control' :
+                  switch(data.value){
+                     case 'play' :
+                        player.play();
+                        break;
+                     case 'pause' : 
+                        player.pause();
+                        break;
+                     case 'next':
+                        get_next();
+                        break;
+                  }
+                  break;
+           }
+         });
+
       });
    </script>
 </body>

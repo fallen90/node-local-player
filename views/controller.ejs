@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Controller</title>
+
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+		.current_time, .current_duration {
+			font-family : 'Courier New';
+		}
+    </style>
+  </head>
+
+  <body>
+
+    <div class="container" style="margin-top:15%">
+    	<h4 id="current_playing"></h4>
+    	<a class="btn btn-primary" id="play">PLAY</a>
+    	<a class="btn btn-info" id="pause">PAUSE</a>
+    	<a class="btn btn-danger" id="next">NEXT >></a>
+    	<hr />
+		<input type="range" id="duration" min="10" value="10" max="2000" step="100">
+		<span class="current_time"></span> / 
+		<span class="current_duration"></span>
+
+		<div class="list-group" id="playlist" style="margin-top: 5%;height: 400px;overflow: auto;">
+		</div>
+    </div>
+
+    <script src="/list?callback=update_playlist"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+	<script src="/socket.io/socket.io.js"></script>
+	<script src="/scripts/moment/min/moment.min.js"></script>
+    <script src="/scripts/underscore/underscore.js"></script>
+	<script>
+		socket = io();
+		playlist = [];
+		current_playing = {
+			src : ""
+		};
+
+		function toTime(time){
+			return moment("1900-01-01 00:00:00").add(time, 'seconds').format("mm:ss")
+		}
+
+		function update_playlist(list){
+			playlist = list;
+			_.each(playlist, item => {
+				let src = sanitizeSrc(item.sources[0].src);
+
+				$('#playlist').append(`
+					<a href="#" class="list-group-item">
+						<h4 class="list-group-item-heading">`+ src +`</h4>
+					</a>
+				`);
+			});
+		}
+
+		function execJSONP(url, cb) {
+		    var script = document.createElement('script');
+		    script.async = true;
+		    var callb = 'exec'+Math.floor((Math.random()*65535)+1);
+		    window[callb] = function(data) {
+		        var scr = document.getElementById(callb);
+		        scr.parentNode.removeChild(scr);
+		        cb(data);
+		        window[callb] = null;
+		        delete window[callb];
+		    }
+		    var sepchar = (url.indexOf('?') > -1)?'&':'?';
+		    script.src = url+sepchar+'callback='+callb;
+		    script.id = callb;
+		    document.getElementsByTagName('head')[0].appendChild(script);
+		}
+
+		function sanitizeSrc(fname){
+			return decodeURI(fname)
+			.replace('/', '')
+			.replace('.mp4','')
+			.replace('.MP4','')
+			.replace('.avi','')
+			.replace(/\%2B/ig,'+')
+			.replace('_xvid','');
+		}
+
+		socket.on('timeupdate', function(data){
+			$('#duration').attr('min', 0);
+			$('#duration').attr('max', data.progress.duration);
+			$('#duration').attr('step', 0.00000001);
+			$('#duration').val(data.progress.current_time);
+
+			let current_time = toTime(data.progress.current_time);
+			let current_duration = toTime(data.progress.duration);
+
+			$('.current_time').text(current_time);
+			$('.current_duration').text(current_duration);
+
+			current_playing = data.playing.sources[0];
+
+			$('#current_playing').text(sanitizeSrc(current_playing.src));
+		});
+		
+		socket.on('controller', function(data){
+			switch(data.type){
+				case 'playlist' :
+					playlist = data.data;
+
+					update_playlist();
+
+					break;
+				case 'seek' :
+					break;
+				case 'control' :
+					break;
+				default:
+					console.log('unknown', data);
+					break;
+			}
+		});
+
+		$('#duration').on('input', e=>{
+			let current_time = toTime(parseFloat($('#duration').val()));
+			$('.current_time').text(current_time);
+
+			socket.emit('controller', {
+				type : 'seek',
+				value : parseFloat($('#duration').val())
+			});
+		});
+
+		
+		execJSONP('/list', update_playlist);
+
+
+		// ** buttons ** //
+
+		$('#play').on('click', function(e){
+			socket.emit('controller', {
+				type : 'control',
+				value : 'play'
+			});
+		});
+		$('#pause').on('click', function(e){
+			socket.emit('controller', {
+				type : 'control',
+				value : 'pause'
+			});
+		});
+		$('#next').on('click', function(e){
+			socket.emit('controller', {
+				type : 'control',
+				value : 'next'
+			});
+		});
+	</script>
+
+  </body>
+</html>
