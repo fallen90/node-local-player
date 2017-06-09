@@ -1,5 +1,7 @@
+#!/home/fallen90/.nvm/versions/node/v6.10.2/bin/node
 let __currentdirr = process.cwd();
 let saved_dirs = [__currentdirr,
+	'/media/fallen90/Workspace/Foster/',
 	'/home/fallen90/Videos/',
 	'/home/fallen90/Videos/BabyLooneyTunes/',
 	'/media/fallen90/BRUH/Sofia the first/',
@@ -52,7 +54,7 @@ function init(req) {
 				src: item,
 				type: 'video/mp4'
 			}],
-			poster : 'http://media.w3.org/2010/05/sintel/poster.png'
+			poster : '/poster.png'
 		});
 	});
 	
@@ -63,6 +65,26 @@ function init(req) {
 }
 
 function shuffle(a) {
+	for (let i = a.length; i; i--) {
+		let j = Math.floor(Math.random() * i);
+		[a[i - 1], a[j]] = [a[j], a[i - 1]];
+	}
+
+	for (let i = a.length; i; i--) {
+		let j = Math.floor(Math.random() * i);
+		[a[i - 1], a[j]] = [a[j], a[i - 1]];
+	}
+
+	for (let i = a.length; i; i--) {
+		let j = Math.floor(Math.random() * i);
+		[a[i - 1], a[j]] = [a[j], a[i - 1]];
+	}
+
+	for (let i = a.length; i; i--) {
+		let j = Math.floor(Math.random() * i);
+		[a[i - 1], a[j]] = [a[j], a[i - 1]];
+	}
+
 	for (let i = a.length; i; i--) {
 		let j = Math.floor(Math.random() * i);
 		[a[i - 1], a[j]] = [a[j], a[i - 1]];
@@ -101,6 +123,8 @@ if (add_this && add_this_host != false) {
 	});
 	app.use('/scripts', express.static(__dirname + '/node_modules/'));
 	app.use('/scripts', express.static(__dirname + '/node_modules/'));
+	app.use('/', express.static(__dirname + '/views/'));
+
 	app.get('/', (req, res) => { res.redirect('/init'); });
 	app.get('/list', (req, res) => {
 		return res.json(playlist);
