@@ -42,6 +42,18 @@
 		current_playing = {
 			src : ""
 		};
+		function notify(msg) {
+
+		  if (Notification.permission !== "granted")
+		    Notification.requestPermission();
+		  else {
+		    var notification = new Notification('Era Player', {
+		      icon: 'https://cdn3.iconfinder.com/data/icons/iconic-1/32/play_alt-512.png',
+		      body: msg
+		    });	    
+		  }
+
+		}
 
 		function toTime(time){
 			return moment("1900-01-01 00:00:00").add(time, 'seconds').format("mm:ss")
@@ -101,7 +113,12 @@
 
 			current_playing = data.playing.sources[0];
 
+			if($('#current_playing').text() !== sanitizeSrc(current_playing.src)){
+				notify(sanitizeSrc(current_playing.src) + " is currently playing");
+			}
+
 			$('#current_playing').text(sanitizeSrc(current_playing.src));
+
 		});
 		
 		socket.on('controller', function(data){
