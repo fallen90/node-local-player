@@ -18,14 +18,27 @@
 
     <div class="container" style="margin-top:15%">
     	<h4 id="current_playing"></h4>
-    	<a class="btn btn-primary" id="play">PLAY</a>
-    	<a class="btn btn-info" id="pause">PAUSE</a>
-    	<a class="btn btn-danger" id="next">NEXT >></a>
+    	<a class="btn btn-primary glyphicon glyphicon-play" id="play"></a>
+    	<a class="btn btn-info glyphicon glyphicon-pause" id="pause"></a>
+    	<a class="btn btn-danger glyphicon glyphicon-step-forward" id="next"></a>
     	<hr />
 		<input type="range" id="duration" min="10" value="10" max="2000" step="100">
 		<span class="current_time"></span> / 
 		<span class="current_duration"></span>
-
+		<hr />
+		<div class="input-group">
+	      <input type="text" class="form-control" placeholder="Play URL" id="play_url_string">
+	      <span class="input-group-btn">
+	        <button class="btn btn-primary" id="play_url" type="button"><i class="glyphicon glyphicon-play"></i></button>
+	      </span>
+	    </div><!-- /input-group -->
+	    <div class="checkbox">
+	    	<label>
+	    		<input type="checkbox" value="is_youtube" id="is_youtube">
+	    		Youtube Video
+	    	</label>
+	    </div>
+		<hr />
 		<div class="list-group" id="playlist" style="margin-top: 5%;height: 400px;overflow: auto;">
 		</div>
     </div>
@@ -50,7 +63,8 @@
 		    var notification = new Notification('Era Player', {
 		      icon: 'https://cdn3.iconfinder.com/data/icons/iconic-1/32/play_alt-512.png',
 		      body: msg
-		    });	    
+		    });
+		     setTimeout(notification.close.bind(notification), 2000); 
 		  }
 
 		}
@@ -62,13 +76,26 @@
 		function update_playlist(list){
 			playlist = list;
 			_.each(playlist, item => {
-				let src = sanitizeSrc(item.sources[0].src);
+				item = item.sources[0];
 
-				$('#playlist').append(`
+				let src = sanitizeSrc(item.src);
+				let li = $(`
 					<a href="#" class="list-group-item">
 						<h4 class="list-group-item-heading">`+ src +`</h4>
 					</a>
 				`);
+
+				$('#playlist').append(li);
+
+				li.on('click', function(e){
+					socket.emit('controller', {
+						type : 'source_update',
+						value : {
+							src : item.src,
+							type : item.type
+						}
+					});
+				})
 			});
 		}
 
@@ -90,12 +117,14 @@
 		}
 
 		function sanitizeSrc(fname){
+			let host = window.location.href.replace('controller', '').replace('#','');
 			return decodeURI(fname)
-			.replace('/', '')
+			.replace(host,'')
 			.replace('.mp4','')
 			.replace('.MP4','')
 			.replace('.avi','')
 			.replace(/\%2B/ig,'+')
+			.replace('/', '')
 			.replace('_xvid','');
 		}
 
@@ -111,7 +140,8 @@
 			$('.current_time').text(current_time);
 			$('.current_duration').text(current_duration);
 
-			current_playing = data.playing.sources[0];
+			current_playing = data.playing;
+
 
 			if($('#current_playing').text() !== sanitizeSrc(current_playing.src)){
 				notify(sanitizeSrc(current_playing.src) + " is currently playing");
@@ -132,6 +162,8 @@
 				case 'seek' :
 					break;
 				case 'control' :
+					break;
+				case 'source_update':
 					break;
 				default:
 					console.log('unknown', data);
@@ -172,6 +204,19 @@
 				type : 'control',
 				value : 'next'
 			});
+		});
+
+		$('#play_url').on('click', function(e){
+			let url = $('#play_url_string').val();
+			if(url != ""){
+				socket.emit('controller', {
+					type : 'source_update',
+					value : {
+						src : url,
+						type : ($('#is_youtube').is(":checked")) ? "video/youtube" : 'video/mp4'
+					}
+				});
+			}
 		});
 	</script>
 

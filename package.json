@@ -19,6 +19,7 @@
     "socket.io": "^2.0.2",
     "underscore": "^1.8.3",
     "video.js": "^5.19.0",
-    "videojs-playlist": "^4.0.0"
+    "videojs-playlist": "^4.0.0",
+    "videojs-youtube": "^2.4.0"
   }
 }

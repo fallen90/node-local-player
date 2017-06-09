@@ -35,9 +35,10 @@
 <body>
    <button id="fullscreen">F</button>
    
-   <video id="my-video" class="video-js" data-setup='{ "controls": true, "autoplay": false, "preload": "auto", "aspectRatio": "16:3" }'></video>
+   <video id="my-video" class="video-js" data-setup='{ "techOrder": ["html5", "flash", "youtube"], "controls": true, "autoplay": false, "preload": "auto", "aspectRatio": "16:3" }'></video>
    <script src="/scripts/video.js/dist/video.js"></script>
    <script src="/scripts/videojs-playlist/dist/videojs-playlist.js"></script>
+   <script src="/scripts/videojs-youtube/dist/Youtube.min.js"></script>
    <script src="/scripts/underscore/underscore.js"></script>
    <script src="/socket.io/socket.io.js"></script>
    <script>
@@ -113,7 +114,10 @@
                   current_time : player.currentTime(),
                   duration : player.duration()
                },
-               playing : window.current_item
+               playing : {
+                  src : player.currentSrc(),
+                  type : player.currentType()
+               }
             });
 
 
@@ -144,6 +148,13 @@
                         get_next();
                         break;
                   }
+                  break;
+               case 'source_update' :
+                  console.log('RECVD SRC UPD', data);
+                  player.src(data.value);
+                  player.play();
+                  break;
+               default:
                   break;
            }
          });
