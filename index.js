@@ -12,6 +12,7 @@ let saved_dirs = [__currentdirr,
 	//	'/media/fallen90/Spare HDD/Downloads/Danny Phantom/Season 1/',
 	'/media/fallen90/Era/Movies/Jake and the neverland pirates/',
 	// '/media/fallen90/MICHAEL/Chalkzone/', 
+	'/media/fallen90/Era/Movies/Doc.McStuffins.S01E01-26.720p.WEB-DL.x264.AAC/'
 ];
 let express = require('express');
 let app = express();
@@ -139,7 +140,7 @@ if (add_this && add_this_host != false) {
 		init(req).then(function (ls) {
 			playlist = ls;
 			res.redirect('/viewer');
-		}, function (err) {
+		}, function (err) { 
 			return res.json(err);
 		});
 	});
@@ -152,8 +153,7 @@ if (add_this && add_this_host != false) {
 		shuffle(playlist);
 
 		playlist = playlist;
-
-		res.render('index', { playlist: playlist });
+		res.render('index', { playlist: playlist, is_sync : (req.query.sync) ? true : false });
 	});
 
 	app.get('/controller', (req, res)=>{
@@ -161,9 +161,17 @@ if (add_this && add_this_host != false) {
 	});
 }
 
+let moment = require('moment');
+
 io.on('connection', function (socket) {
 	let current_player = 0;
 	socket.on('timeupdate', function (msg) {
+		let time_rcvd = moment().unix();
+		let main_client_time_sent = msg.time_sent;
+		let time_spent = time_rcvd - main_client_time_sent; //inseconds
+
+		msg.time_spent = time_spent;
+		msg.time_sent = moment().unix();
 		io.sockets.emit('timeupdate', msg);
 	});
 	socket.on('controller', function (msg) {

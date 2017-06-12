@@ -21,6 +21,7 @@
     	<a class="btn btn-primary glyphicon glyphicon-play" id="play"></a>
     	<a class="btn btn-info glyphicon glyphicon-pause" id="pause"></a>
     	<a class="btn btn-danger glyphicon glyphicon-step-forward" id="next"></a>
+    	<a class="btn btn-danger glyphicon glyphicon-refresh" id="refresh"></a>
     	<hr />
 		<input type="range" id="duration" min="10" value="10" max="2000" step="100">
 		<span class="current_time"></span> / 
@@ -149,6 +150,11 @@
 
 			$('#current_playing').text(sanitizeSrc(current_playing.src));
 
+			let time_rcvd = moment().unix();
+			let time_sent_from_server = data.time_sent;
+			let time_spent = time_rcvd - time_sent_from_server;
+			console.log('Time Spent', time_spent, time_rcvd, data.time_sent);
+
 		});
 		
 		socket.on('controller', function(data){
@@ -218,6 +224,13 @@
 				});
 			}
 		});
+
+		$('#refresh').on('click', e=>{
+			socket.emit('controller', {
+				type : 'control',
+				value : 'refresh'
+			});
+		})
 	</script>
 
   </body>

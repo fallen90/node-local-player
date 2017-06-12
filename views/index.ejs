@@ -1,4 +1,5 @@
 <head>
+   <title><%- is_sync %></title>
    <link href="/scripts/video.js/dist/video-js.css" rel="stylesheet">
    <style>
       body {
@@ -40,6 +41,7 @@
    <script src="/scripts/videojs-playlist/dist/videojs-playlist.js"></script>
    <script src="/scripts/videojs-youtube/dist/Youtube.min.js"></script>
    <script src="/scripts/underscore/underscore.js"></script>
+   <script src="/scripts/moment/min/moment.min.js"></script>
    <script src="/socket.io/socket.io.js"></script>
    <script>
       function toggleFullScreen() {
@@ -63,6 +65,9 @@
       });
 
       document.addEventListener('contextmenu', event => event.preventDefault());
+      let TIME_UPDATE_LOCKED = false;
+      let is_sync_client = <%- is_sync %>;
+
       var video = videojs('my-video').ready(function() {
          window.socket = io();
          window.client_id = Math.floor(Math.random() * (99999 - 11111 + 1)) + 0;
@@ -107,20 +112,25 @@
                get_next();
             }
 
-            socket.emit('timeupdate', {
-               from : window.client_id,
-               progress : {
-                  percent : percent,
-                  current_time : player.currentTime(),
-                  duration : player.duration()
-               },
-               playing : {
-                  src : player.currentSrc(),
-                  type : player.currentType()
-               }
-            });
+            let current_time = moment().unix();
 
-
+            if(!is_sync_client){
+               //dont emit if synch client
+               socket.emit('timeupdate', {
+                  from : window.client_id,
+                  progress : {
+                     percent : percent,
+                     current_time : player.currentTime(),
+                     duration : player.duration()
+                  },
+                  time_sent : current_time,
+                  playing : {
+                     src : player.currentSrc(),
+                     type : player.currentType()
+                  }
+               });
+            }
+            
          });
          
          player.on('error', function(e){
@@ -147,6 +157,9 @@
                      case 'next':
                         get_next();
                         break;
+                     case 'refresh':
+                        window.location.reload();
+                        break;
                   }
                   break;
                case 'source_update' :
@@ -158,6 +171,49 @@
                   break;
            }
          });
+
+         if(is_sync_client){
+
+            if(TIME_UPDATE_LOCKED == false){
+               socket.on('timeupdate', function(data){
+
+                  console.log(TIME_UPDATE_LOCKED);
+                  let time_rcvd = moment().unix();
+                  let time_sent_from_server = data.time_sent;
+                  let time_spent = time_rcvd - time_sent_from_server;
+                  let time_diff = data.progress.current_time - player.currentTime();
+                  let time_stock_base = 0.2520000000;
+
+
+                  // if time_diff is negative, the sync player is ahead
+                  // if time_diff is positive, the sync player is behind
+                  // if time_diff is zero, wow that's a first
+
+                  console.log('DIFf', time_diff);
+                  if(time_diff < 0){
+                     console.log('sync player is ahead');
+                     time_stock_base = time_stock_base - Math.abs(time_diff);
+                  }
+
+                  if(time_diff > 0 && time_diff < 1){
+                     console.log('sync player is behind');
+                     time_stock_base = time_stock_base + Math.abs(time_diff);
+                  }
+
+                  if(!TIME_UPDATE_LOCKED){
+                     player.src(data.playing);
+                     player.play();
+                     
+                     player.on('playing', function(){
+                        player.currentTime(data.progress.current_time + time_stock_base);
+                        player.off('playing');
+                     });
+                  }
+                  
+                  TIME_UPDATE_LOCKED = true;
+               });
+            }
+         }
 
       });
    </script>
