@@ -159,6 +159,10 @@ if (add_this && add_this_host != false) {
 	app.get('/controller', (req, res)=>{
 		res.render('controller');
 	});
+	
+	app.get('/crashed', (req, res)=>{
+		res.render('crashed');
+	});
 }
 
 let moment = require('moment');

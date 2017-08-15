@@ -22,6 +22,7 @@
     	<a class="btn btn-info glyphicon glyphicon-pause" id="pause"></a>
     	<a class="btn btn-danger glyphicon glyphicon-step-forward" id="next"></a>
     	<a class="btn btn-danger glyphicon glyphicon-refresh" id="refresh"></a>
+    	<a class="btn btn-danger glyphicon glyphicon-remove-sign" id="close_browser" data-target="tooltip" data-original-title="Close Video Player"></a>
     	<hr />
 		<input type="range" id="duration" min="10" value="10" max="2000" step="100">
 		<span class="current_time"></span> / 
@@ -51,6 +52,10 @@
 	<script src="/scripts/moment/min/moment.min.js"></script>
     <script src="/scripts/underscore/underscore.js"></script>
 	<script>
+		$(document).ready(function(){
+			$('[data-target="tooltip"]').tooltip();
+		});
+
 		socket = io();
 		playlist = [];
 		current_playing = {
@@ -229,6 +234,13 @@
 			socket.emit('controller', {
 				type : 'control',
 				value : 'refresh'
+			});
+		})
+
+		$('#close_browser').on('click', e=>{
+			socket.emit('controller', {
+				type : 'control',
+				value : 'close_browser'
 			});
 		})
 	</script>
