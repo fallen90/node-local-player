@@ -1,25 +1,22 @@
 #!/home/fallen90/.nvm/versions/node/v6.10.2/bin/node
-
 let __currentdirr = process.cwd();
 let saved_dirs = [__currentdirr,
-	'/media/fallen90/Workspace/Foster/',
+	// '/media/fallen90/Workspace/Foster/',
 	'/home/fallen90/Videos/',
 	'/home/fallen90/Videos/BabyLooneyTunes/',
 	'/media/fallen90/BRUH/Sofia the first/',
-	'/media/fallen90/Spare HDD/Downloads/Sheriff Callie\'s Wild West Season 1, Episodes 01-17 [Nanto]/',
-	//	'/media/fallen90/Spare HDD/Downloads/Danny Phantom/Season 3/',
-	//	'/media/fallen90/Spare HDD/Downloads/Danny Phantom/Season 2/',
-	//	'/media/fallen90/Spare HDD/Downloads/Danny Phantom/Season 1/',
-	'/media/fallen90/Era/Movies/Jake and the neverland pirates/',
+	// '/media/fallen90/Spare HDD/Downloads/Sheriff Callie\'s Wild West Season 1, Episodes 01-17 [Nanto]/',
+	// '/media/fallen90/Spare HDD/Downloads/Danny Phantom/Season 3/',
+	// '/media/fallen90/Spare HDD/Downloads/Danny Phantom/Season 2/',
+	// '/media/fallen90/Spare HDD/Downloads/Danny Phantom/Season 1/',
+	// '/media/fallen90/Era/Movies/Jake and the neverland pirates/',
 	// '/media/fallen90/MICHAEL/Chalkzone/', 
-	'/media/fallen90/Era/Movies/Doc.McStuffins.S01E01-26.720p.WEB-DL.x264.AAC/'
+	// '/media/fallen90/Era/Movies/Doc.McStuffins.S01E01-26.720p.WEB-DL.x264.AAC/'
 ];
 let express = require('express');
 let app = express();
 var server = require('http').createServer(app);
 var io = require('socket.io').listen(server);
-
-
 
 let nsort = require('node-natural-sort');
 let path = require('path');

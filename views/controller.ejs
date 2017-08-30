@@ -22,11 +22,24 @@
     	<a class="btn btn-info glyphicon glyphicon-pause" id="pause"></a>
     	<a class="btn btn-danger glyphicon glyphicon-step-forward" id="next"></a>
     	<a class="btn btn-danger glyphicon glyphicon-refresh" id="refresh"></a>
+    	<a class="btn btn-danger glyphicon glyphicon-fullscreen" id="fullscreen"></a>
     	<a class="btn btn-danger glyphicon glyphicon-remove-sign" id="close_browser" data-target="tooltip" data-original-title="Close Video Player"></a>
     	<hr />
 		<input type="range" id="duration" min="10" value="10" max="2000" step="100">
 		<span class="current_time"></span> / 
 		<span class="current_duration"></span>
+
+		<div class="row" style="margin-top:20px;">
+			<div class="col-xs-6">
+				<strong>Brightness (<span class="current_brightness">50%</span>)</strong>
+				<input type="range" id="brightness" max="0.8" value="0.5" min="0" step="0.001" style="direction:rtl">
+			</div>
+			<div class="col-xs-6">
+				<strong>Volume</strong>
+				<input type="range" id="volume" min="10" value="10" max="2000" step="100">
+			</div>
+		</div>
+
 		<hr />
 		<div class="input-group">
 	      <input type="text" class="form-control" placeholder="Play URL" id="play_url_string">
@@ -55,6 +68,8 @@
 		$(document).ready(function(){
 			$('[data-target="tooltip"]').tooltip();
 		});
+
+		var brightness = 0.5;
 
 		socket = io();
 		playlist = [];
@@ -166,15 +181,15 @@
 			switch(data.type){
 				case 'playlist' :
 					playlist = data.data;
-
 					update_playlist();
-
 					break;
 				case 'seek' :
 					break;
 				case 'control' :
 					break;
 				case 'source_update':
+					break;
+				case 'brightness':
 					break;
 				default:
 					console.log('unknown', data);
@@ -192,10 +207,16 @@
 			});
 		});
 
+		$('#brightness').on('input', e => {
+			brightness = parseFloat($('#brightness').val());
+
+			$('.current_brightness').text(( 100 - ( (brightness) * 100)).toFixed(0) + '%');
+			socket.emit('controller', {
+				type: 'brightness',
+				value : parseFloat(brightness)
+			});
+		});
 		
-		execJSONP('/list', update_playlist);
-
-
 		// ** buttons ** //
 
 		$('#play').on('click', function(e){
@@ -242,7 +263,18 @@
 				type : 'control',
 				value : 'close_browser'
 			});
+		});
+
+		$('#fullscreen').on('click', e=>{
+			socket.emit('controller', {
+				type : 'control',
+				value : 'fullscreen'
+			})
 		})
+
+
+
+		execJSONP('/list', update_playlist);
 	</script>
 
   </body>
