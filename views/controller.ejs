@@ -24,6 +24,7 @@
     	<a class="btn btn-danger glyphicon glyphicon-refresh" id="refresh"></a>
     	<a class="btn btn-danger glyphicon glyphicon-fullscreen" id="fullscreen"></a>
     	<a class="btn btn-danger glyphicon glyphicon-remove-sign" id="close_browser" data-target="tooltip" data-original-title="Close Video Player"></a>
+    	<a class="btn btn-danger glyphicon glyphicon-refresh" id="remote_audio"></a>
     	<hr />
 		<input type="range" id="duration" min="10" value="10" max="2000" step="100">
 		<span class="current_time"></span> / 
@@ -56,6 +57,7 @@
 		<hr />
 		<div class="list-group" id="playlist" style="margin-top: 5%;height: 400px;overflow: auto;">
 		</div>
+		<iframe src="/viewer?sync=1"></iframe>
     </div>
 
     <script src="/list?callback=update_playlist"></script>
@@ -270,7 +272,12 @@
 			})
 		})
 
-
+		$('#remote_audio').on('click', e => {
+			socket.emit('controller', {
+				type : 'control',
+				value : 'remote_audio'
+			});
+		});
 
 		execJSONP('/list', update_playlist);
 	</script>

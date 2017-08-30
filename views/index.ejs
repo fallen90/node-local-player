@@ -93,6 +93,7 @@
       }
 
       var video = videojs('my-video').ready(function() {
+
          window.socket = io();
          window.client_id = Math.floor(Math.random() * (99999 - 11111 + 1)) + 0;
          window.player = this;
@@ -114,6 +115,7 @@
             }
 
             playlist_played.push(next_index);
+
          }
 
          player.playlist(window.playlist);
@@ -127,7 +129,19 @@
                }
             });
 
-
+            socket.emit('timeupdate', {
+               from : window.client_id,
+               progress : {
+                  percent : 0,
+                  current_time : 0,
+                  duration : player.duration()
+               },
+               time_sent :  moment().unix(),
+               playing : {
+                  src : player.currentSrc(),
+                  type : player.currentType()
+               }
+            });
          });
 
          player.on('timeupdate', function(e) {
@@ -139,9 +153,10 @@
             let current_time = moment().unix();
 
             if(!is_sync_client){
-               //dont emit if synch client
+               //dont emit if sync client
                socket.emit('timeupdate', {
                   from : window.client_id,
+                  is_sync : is_sync_client,
                   progress : {
                      percent : percent,
                      current_time : player.currentTime(),
@@ -196,6 +211,10 @@
                      case 'fullscreen':
                         toggleFullScreen();
                         break;
+                     case 'remote_audio':
+                        if(!is_sync_client)
+                           player.muted(true);
+                        break;
                      case 'close_browser':
                         if(require != null){
                            const remote = require('electron').remote;
@@ -208,21 +227,32 @@
                   }
                   break;
                case 'source_update' :
-                  console.log('RECVD SRC UPD', data);
-                  player.src(data.value);
-                  player.play();
+                  if(!is_sync_client){
+                     console.log('RECVD SRC UPD', data);
+                     player.src(data.value);
+                     player.play();
+                  }
                   break;
                default:
                   break;
            }
          });
 
+            document.querySelector('.brightness-overlay').setAttribute('style', 'display:none');
          if(is_sync_client){
-
             if(TIME_UPDATE_LOCKED == false){
                socket.on('timeupdate', function(data){
 
-                  console.log(TIME_UPDATE_LOCKED);
+                  //check if player current src is on the sync
+                  let player_src = player.currentSrc();
+
+                  if(player_src != data.playing.src){
+                     // not equal
+                     player.src(data.playing);
+                     if(data.progress.percent != null)
+                        player.play();
+                  }
+
                   let time_rcvd = moment().unix();
                   let time_sent_from_server = data.time_sent;
                   let time_spent = time_rcvd - time_sent_from_server;
@@ -234,14 +264,11 @@
                   // if time_diff is positive, the sync player is behind
                   // if time_diff is zero, wow that's a first
 
-                  console.log('DIFf', time_diff);
                   if(time_diff < 0){
-                     console.log('sync player is ahead');
                      time_stock_base = time_stock_base - Math.abs(time_diff);
                   }
 
                   if(time_diff > 0 && time_diff < 1){
-                     console.log('sync player is behind');
                      time_stock_base = time_stock_base + Math.abs(time_diff);
                   }
 
