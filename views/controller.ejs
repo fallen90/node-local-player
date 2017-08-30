@@ -173,8 +173,6 @@
 			let time_rcvd = moment().unix();
 			let time_sent_from_server = data.time_sent;
 			let time_spent = time_rcvd - time_sent_from_server;
-			console.log('Time Spent', time_spent, time_rcvd, data.time_sent);
-
 		});
 		
 		socket.on('controller', function(data){
